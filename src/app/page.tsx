@@ -352,7 +352,7 @@ export default function ChatPage() {
                       onTouchStart={handleTouchStart(msg.id || idx)}
                       onTouchEnd={handleTouchEnd}
                     >
-                      <div className="flex flex-col items-start">
+                      <div className={`flex flex-col ${isMyMessage ? 'items-end' : 'items-start'}`}>
                         <div
                           className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-2xl shadow-sm cursor-pointer select-none [touch-action:manipulation] [-webkit-touch-callout:none] [-webkit-user-select:none] ${
                             isMyMessage
@@ -381,7 +381,7 @@ export default function ChatPage() {
                         </div>
                         {/* Reactions display */}
                         {messageReactions[msg.id || idx] && messageReactions[msg.id || idx].length > 0 && (
-                          <div className={`flex gap-1 mt-1 ${isMyMessage ? 'justify-end' : 'justify-start'} w-full`}>
+                          <div className="flex gap-1 mt-1 flex-wrap">
                             {messageReactions[msg.id || idx].map((r) => (
                               <span
                                 key={r.reaction}
