@@ -30,6 +30,44 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
 
+  const [reactionMenu, setReactionMenu] = useState<{msgId: number, x: number, y: number} | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '👏'];
+
+  const handleTouchStart = (msgId: number) => (e: React.TouchEvent | React.MouseEvent) => {
+    const touch = 'touches' in e ? e.touches[0] : e;
+    longPressTimerRef.current = setTimeout(() => {
+      setReactionMenu({
+        msgId,
+        x: touch.clientX,
+        y: touch.clientY - 60,
+      });
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+  };
+
+  const addReaction = (reaction: string) => {
+    if (reactionMenu) {
+      // Add reaction logic here - would need WebSocket message
+      console.log(`Added ${reaction} to message ${reactionMenu.msgId}`);
+      setReactionMenu(null);
+    }
+  };
+
+  // Close reaction menu on click outside
+  useEffect(() => {
+    const handleClick = () => setReactionMenu(null);
+    if (reactionMenu) {
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
+    }
+  }, [reactionMenu]);
+
   const { connected, messages, joinGroup, sendChatMessage, leaveGroup, sendTyping, clearMessages } = useWebSocket();
 
   // Load groups when user is set
@@ -265,6 +303,28 @@ export default function ChatPage() {
               <h2 className="font-semibold text-lg text-black">{currentGroup.name}</h2>
             </div>
 
+            {/* Reaction Menu Popup */}
+            {reactionMenu && (
+              <div 
+                className="fixed z-50 bg-white rounded-full shadow-lg px-2 py-2 flex gap-1 items-center animate-in fade-in slide-in-from-bottom-2"
+                style={{ 
+                  left: Math.max(10, Math.min(window.innerWidth - 280, reactionMenu.x - 130)), 
+                  top: Math.max(10, reactionMenu.y),
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {REACTIONS.map((reaction) => (
+                  <button
+                    key={reaction}
+                    onClick={() => addReaction(reaction)}
+                    className="w-10 h-10 flex items-center justify-center text-2xl hover:bg-gray-100 rounded-full transition-transform hover:scale-125"
+                  >
+                    {reaction}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1 min-h-0">
               {chatHistory.map((msg, idx) => {
                 const isMyMessage = Number(msg.userId) === Number(user.id);
@@ -279,9 +339,14 @@ export default function ChatPage() {
                       className={`flex ${
                         isMyMessage ? 'justify-end' : 'justify-start'
                       }`}
+                      onMouseDown={handleTouchStart(msg.id || idx)}
+                      onMouseUp={handleTouchEnd}
+                      onMouseLeave={handleTouchEnd}
+                      onTouchStart={handleTouchStart(msg.id || idx)}
+                      onTouchEnd={handleTouchEnd}
                     >
                       <div
-                        className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-2xl shadow-sm ${
+                        className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-2xl shadow-sm cursor-pointer select-none ${
                           isMyMessage
                             ? 'bg-blue-500 text-white rounded-br-md'
                             : 'bg-gray-100 text-black rounded-bl-md'
