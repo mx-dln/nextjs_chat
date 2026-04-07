@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "ws": "tsx websocket/server.ts"
+    "ws": "tsx websocket/server.ts",
+    "ws:prod": "tsx websocket/server.ts"
   },
   "dependencies": {
     "mysql2": "^3.20.0",

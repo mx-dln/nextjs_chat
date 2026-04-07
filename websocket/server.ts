@@ -3,7 +3,7 @@ import { createServer } from 'http';
 import pool from '../src/lib/db';
 import type { ResultSetHeader } from 'mysql2/promise';
 
-const PORT = process.env.WS_PORT ? parseInt(process.env.WS_PORT) : 3001;
+const PORT = process.env.PORT || (process.env.WS_PORT ? parseInt(process.env.WS_PORT) : 3001);
 
 // Store connected clients: groupId -> Set of WebSockets
 const groupClients = new Map<number, Set<WebSocket>>();

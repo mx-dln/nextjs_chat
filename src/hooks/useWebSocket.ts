@@ -7,6 +7,8 @@ export interface WebSocketMessage {
   [key: string]: any;
 }
 
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
+
 export function useWebSocket() {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
@@ -14,8 +16,8 @@ export function useWebSocket() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connect = useCallback(() => {
-    console.log('Attempting WebSocket connection...');
-    const websocket = new WebSocket('ws://localhost:3001');
+    console.log(`Attempting WebSocket connection to ${WS_URL}...`);
+    const websocket = new WebSocket(WS_URL);
 
     websocket.onopen = () => {
       console.log('Connected to chat server');
