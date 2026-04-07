@@ -108,6 +108,78 @@ wss.on('connection', (ws: WebSocket) => {
             }, ws);
           }
           break;
+
+        case 'reaction':
+          // User adds reaction to message
+          if (data.groupId && data.messageId && data.userId && data.reaction && data.username) {
+            const groupId = parseInt(data.groupId);
+            const messageId = parseInt(data.messageId);
+            const userId = parseInt(data.userId);
+            const reaction = data.reaction;
+
+            try {
+              // Save reaction to database
+              await pool.query(
+                'INSERT INTO reactions (message_id, user_id, reaction) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE reaction = ?',
+                [messageId, userId, reaction, reaction]
+              );
+
+              // Get all reactions for this message
+              const [reactions] = await pool.query(
+                'SELECT reaction, COUNT(*) as count FROM reactions WHERE message_id = ? GROUP BY reaction',
+                [messageId]
+              );
+
+              // Broadcast to group
+              broadcastToGroup(groupId, {
+                type: 'reaction',
+                messageId,
+                userId,
+                username: data.username,
+                reaction,
+                reactions: reactions as any[],
+              });
+            } catch (err) {
+              console.error('Error saving reaction:', err);
+            }
+          }
+          break;
+
+        case 'remove_reaction':
+          // User removes reaction from message
+          if (data.groupId && data.messageId && data.userId && data.reaction) {
+            const groupId = parseInt(data.groupId);
+            const messageId = parseInt(data.messageId);
+            const userId = parseInt(data.userId);
+            const reaction = data.reaction;
+
+            try {
+              // Remove reaction from database
+              await pool.query(
+                'DELETE FROM reactions WHERE message_id = ? AND user_id = ? AND reaction = ?',
+                [messageId, userId, reaction]
+              );
+
+              // Get remaining reactions for this message
+              const [reactions] = await pool.query(
+                'SELECT reaction, COUNT(*) as count FROM reactions WHERE message_id = ? GROUP BY reaction',
+                [messageId]
+              );
+
+              // Broadcast to group
+              broadcastToGroup(groupId, {
+                type: 'reaction',
+                messageId,
+                userId,
+                reaction,
+                reactions: reactions as any[],
+                removed: true,
+              });
+            } catch (err) {
+              console.error('Error removing reaction:', err);
+            }
+          }
+          break;
       }
     } catch (error) {
       console.error('WebSocket message error:', error);

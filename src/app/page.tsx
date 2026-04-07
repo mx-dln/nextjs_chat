@@ -52,9 +52,8 @@ export default function ChatPage() {
   };
 
   const addReaction = (reaction: string) => {
-    if (reactionMenu) {
-      // Add reaction logic here - would need WebSocket message
-      console.log(`Added ${reaction} to message ${reactionMenu.msgId}`);
+    if (reactionMenu && currentGroup && user) {
+      sendReaction(currentGroup.id, reactionMenu.msgId, user.id, user.username, reaction);
       setReactionMenu(null);
     }
   };
@@ -68,7 +67,8 @@ export default function ChatPage() {
     }
   }, [reactionMenu]);
 
-  const { connected, messages, joinGroup, sendChatMessage, leaveGroup, sendTyping, clearMessages } = useWebSocket();
+  const { connected, messages, joinGroup, sendChatMessage, leaveGroup, sendTyping, sendReaction, clearMessages } = useWebSocket();
+  const [messageReactions, setMessageReactions] = useState<Record<number, {reaction: string, count: number}[]>>({});
 
   // Load groups when user is set
   useEffect(() => {
@@ -94,6 +94,12 @@ export default function ChatPage() {
           }
           return newSet;
         });
+      } else if (msg.type === 'reaction') {
+        // Update reactions for the message
+        setMessageReactions((prev) => ({
+          ...prev,
+          [msg.messageId]: msg.reactions || [],
+        }));
       }
     });
   }, [messages, user]);
@@ -149,6 +155,7 @@ export default function ChatPage() {
     setSidebarOpen(false); // Close sidebar on mobile when selecting group
     clearMessages();
     setChatHistory([]);
+    setMessageReactions({}); // Clear reactions when switching
     setTypingUsers(new Set()); // Clear typing users when switching
     if (user) {
       joinGroup(group.id, user.id, user.username);
@@ -345,31 +352,46 @@ export default function ChatPage() {
                       onTouchStart={handleTouchStart(msg.id || idx)}
                       onTouchEnd={handleTouchEnd}
                     >
-                      <div
-                        className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-2xl shadow-sm cursor-pointer select-none [touch-action:manipulation] [-webkit-touch-callout:none] [-webkit-user-select:none] ${
-                          isMyMessage
-                            ? 'bg-blue-500 text-white rounded-br-md'
-                            : 'bg-gray-100 text-black rounded-bl-md'
-                        }`}
-                      >
-                        {!isMyMessage && (
-                          <div className="text-xs font-semibold mb-1 text-gray-600">
-                            {msg.username}
-                          </div>
-                        )}
-                        <div className="text-sm break-words">{msg.content}</div>
+                      <div className="flex flex-col items-start">
                         <div
-                          className={`text-xs mt-1 ${
-                            isMyMessage ? 'text-blue-200' : 'text-gray-400'
+                          className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-2xl shadow-sm cursor-pointer select-none [touch-action:manipulation] [-webkit-touch-callout:none] [-webkit-user-select:none] ${
+                            isMyMessage
+                              ? 'bg-blue-500 text-white rounded-br-md'
+                              : 'bg-gray-100 text-black rounded-bl-md'
                           }`}
                         >
-                          {msg.createdAt
-                            ? new Date(msg.createdAt).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : ''}
+                          {!isMyMessage && (
+                            <div className="text-xs font-semibold mb-1 text-gray-600">
+                              {msg.username}
+                            </div>
+                          )}
+                          <div className="text-sm break-words">{msg.content}</div>
+                          <div
+                            className={`text-xs mt-1 ${
+                              isMyMessage ? 'text-blue-200' : 'text-gray-400'
+                            }`}
+                          >
+                            {msg.createdAt
+                              ? new Date(msg.createdAt).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : ''}
+                          </div>
                         </div>
+                        {/* Reactions display */}
+                        {messageReactions[msg.id || idx] && messageReactions[msg.id || idx].length > 0 && (
+                          <div className={`flex gap-1 mt-1 ${isMyMessage ? 'justify-end' : 'justify-start'} w-full`}>
+                            {messageReactions[msg.id || idx].map((r) => (
+                              <span
+                                key={r.reaction}
+                                className="bg-white border rounded-full px-2 py-0.5 text-sm shadow-sm flex items-center gap-1"
+                              >
+                                {r.reaction} <span className="text-gray-500 text-xs">{r.count}</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

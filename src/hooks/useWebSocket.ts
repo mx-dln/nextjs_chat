@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 export interface WebSocketMessage {
-  type: 'message' | 'system' | 'history' | 'typing';
+  type: 'message' | 'system' | 'history' | 'typing' | 'reaction';
   [key: string]: any;
 }
 
@@ -86,6 +86,10 @@ export function useWebSocket() {
     sendMessage({ type: 'typing', groupId, userId, username, isTyping });
   }, [sendMessage]);
 
+  const sendReaction = useCallback((groupId: number, messageId: number, userId: number, username: string, reaction: string) => {
+    sendMessage({ type: 'reaction', groupId, messageId, userId, username, reaction });
+  }, [sendMessage]);
+
   return {
     connected,
     messages,
@@ -93,6 +97,7 @@ export function useWebSocket() {
     sendChatMessage,
     leaveGroup,
     sendTyping,
+    sendReaction,
     clearMessages: () => setMessages([]),
   };
 }
