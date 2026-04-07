@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useWebSocket, type WebSocketMessage } from '@/hooks/useWebSocket';
+import { Menu, ArrowLeft } from 'lucide-react';
 
 interface User {
   id: number;
@@ -24,6 +25,7 @@ export default function ChatPage() {
   const [chatHistory, setChatHistory] = useState<WebSocketMessage[]>([]);
   const [newGroupName, setNewGroupName] = useState('');
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
@@ -106,6 +108,7 @@ export default function ChatPage() {
       leaveGroup(currentGroup.id);
     }
     setCurrentGroup(group);
+    setSidebarOpen(false); // Close sidebar on mobile when selecting group
     clearMessages();
     setChatHistory([]);
     setTypingUsers(new Set()); // Clear typing users when switching
@@ -166,8 +169,8 @@ export default function ChatPage() {
   // Login screen
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <form onSubmit={createUser} className="bg-white p-8 rounded-lg shadow-md w-96">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <form onSubmit={createUser} className="bg-white p-6 sm:p-8 rounded-lg shadow-md w-full max-w-sm">
           <h1 className="text-2xl font-bold mb-6 text-center">Join Chat</h1>
           <input
             type="text"
@@ -189,13 +192,29 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-gray-100 flex relative">
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar - Groups */}
-      <div className="w-64 bg-white border-r flex flex-col">
+      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 w-64 bg-white border-r flex flex-col z-50 transition-transform duration-200 ease-in-out`}>
         <div className="p-4 border-b">
           <div className="flex items-center justify-between mb-2">
-            <span className="font-semibold text-black">{user.username}</span>
-            <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className="font-semibold text-black truncate">{user.username}</span>
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
+              <button 
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden p-1 hover:bg-gray-100 rounded"
+              >
+                <ArrowLeft size={20} />
+              </button>
+            </div>
           </div>
           <form onSubmit={createGroup} className="flex gap-2">
             <input
@@ -233,21 +252,26 @@ export default function ChatPage() {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden w-full">
         {currentGroup ? (
           <>
-            <div className="bg-white border-b p-4 flex-shrink-0">
+            <div className="bg-white border-b p-3 sm:p-4 flex-shrink-0 flex items-center gap-3">
+              <button 
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <Menu size={20} />
+              </button>
               <h2 className="font-semibold text-lg text-black">{currentGroup.name}</h2>
             </div>
 
-            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1 min-h-0">
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1 min-h-0">
               {chatHistory.map((msg, idx) => {
                 const isMyMessage = Number(msg.userId) === Number(user.id);
-                console.log(`Msg ${idx}: userId=${msg.userId} (type: ${typeof msg.userId}), myId=${user.id} (type: ${typeof user.id}), match=${isMyMessage}`);
                 return (
                 <div key={idx}>
                   {msg.type === 'system' ? (
-                    <div className="text-center text-gray-500 text-sm py-2">
+                    <div className="text-center text-gray-500 text-xs sm:text-sm py-2">
                       {msg.message}
                     </div>
                   ) : (
@@ -257,7 +281,7 @@ export default function ChatPage() {
                       }`}
                     >
                       <div
-                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-sm ${
+                        className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-2xl shadow-sm ${
                           isMyMessage
                             ? 'bg-blue-500 text-white rounded-br-md'
                             : 'bg-gray-100 text-black rounded-bl-md'
@@ -268,7 +292,7 @@ export default function ChatPage() {
                             {msg.username}
                           </div>
                         )}
-                        <div className="text-sm">{msg.content}</div>
+                        <div className="text-sm break-words">{msg.content}</div>
                         <div
                           className={`text-xs mt-1 ${
                             isMyMessage ? 'text-blue-200' : 'text-gray-400'
@@ -290,11 +314,11 @@ export default function ChatPage() {
 
             {/* Typing indicator - Messenger style bubble with dots */}
             {typingUsers.size > 0 && (
-              <div className="flex flex-col items-start px-4 pb-2 flex-shrink-0">
+              <div className="flex flex-col items-start px-3 sm:px-4 pb-2 flex-shrink-0">
                 <span className="text-xs text-gray-500 mb-1 ml-2">
                   {Array.from(typingUsers).join(', ')}
                 </span>
-                <div className="bg-gray-100 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm flex items-center gap-1">
+                <div className="bg-gray-100 rounded-2xl rounded-bl-md px-3 sm:px-4 py-2 sm:py-3 shadow-sm flex items-center gap-1">
                   <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                   <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -302,25 +326,31 @@ export default function ChatPage() {
               </div>
             )}
 
-            <form onSubmit={sendMessage} className="bg-white border-t p-4 flex gap-2 flex-shrink-0">
+            <form onSubmit={sendMessage} className="bg-white border-t p-3 sm:p-4 flex gap-2 flex-shrink-0">
               <input
                 type="text"
                 value={messageInput}
                 onChange={handleTyping}
                 placeholder="Type a message..."
-                className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
+                className="flex-1 px-3 sm:px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black text-sm sm:text-base"
               />
               <button
                 type="submit"
-                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+                className="bg-blue-500 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-600 text-sm sm:text-base"
               >
                 Send
               </button>
             </form>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            Select a group to start chatting
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-500 p-4">
+            <button 
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden mb-4 p-3 bg-white rounded-lg shadow-md hover:bg-gray-50"
+            >
+              <Menu size={24} />
+            </button>
+            <p className="text-center">Select a group to start chatting</p>
           </div>
         )}
       </div>
