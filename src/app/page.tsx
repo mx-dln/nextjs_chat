@@ -346,7 +346,7 @@ export default function ChatPage() {
                       onTouchEnd={handleTouchEnd}
                     >
                       <div
-                        className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-2xl shadow-sm cursor-pointer select-none ${
+                        className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-2xl shadow-sm cursor-pointer select-none [touch-action:manipulation] [-webkit-touch-callout:none] [-webkit-user-select:none] ${
                           isMyMessage
                             ? 'bg-blue-500 text-white rounded-br-md'
                             : 'bg-gray-100 text-black rounded-bl-md'
